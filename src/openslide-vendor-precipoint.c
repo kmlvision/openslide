@@ -175,7 +175,7 @@ static struct vmic_handle* vmic_handle_new( struct vmic_handlecache *vc,
 
     vh->inner = _openslide_zip_open_archive_from_source(zs, err);
     if (!vh->inner) {
-      g_prefix_error( err, 
+      g_prefix_error( err,
                       "vmic_handle_new: cannot open inner archive, reason: ");
       zip_source_close(zs);
       zip_close(zo);
@@ -184,7 +184,7 @@ static struct vmic_handle* vmic_handle_new( struct vmic_handlecache *vc,
     vh->outer = zo;
   }
   return vh;
-  
+
 FAIL:
   g_slice_free(struct vmic_handle, vh);
   return NULL;
@@ -221,13 +221,13 @@ static struct vmic_handle* vmic_handle_get(struct vmic_handlecache *vc,
   //g_debug("get vmici zip");
   struct vmic_handle *vh;
   g_mutex_lock(vc->lock);
-  // get handle from cache - if none is free, 
+  // get handle from cache - if none is free,
   // create new ones till vc->size_meter > VMIC_HC_MAX_ENTRY_COUNT
   // then wait for one to get released
-  
+
   while ( (vh = g_queue_pop_head(vc->cache)) == NULL
        && vc->instance_count >= vc->instance_max ) {
-      
+
       //g_debug("waiting for g_queue_push signal instance_count=%i, outstanding=%i...", (int) vc->instance_count, (int) vc->outstanding);
       g_cond_wait(vc->cond, vc->lock);
       //g_debug("..wait ended\n");
@@ -248,7 +248,7 @@ static struct vmic_handle* vmic_handle_get(struct vmic_handlecache *vc,
     vc->outstanding--;
     g_mutex_unlock(vc->lock);
   }
-  
+
   return vh;
 }
 
@@ -354,18 +354,18 @@ static bool _openslide_decode_image( gpointer compressed_data,
   *pw = -1; *ph = -1;
 
   if (dzif==IMAGE_FORMAT_JPG) {
-    
+
     success = _openslide_jpeg_decode_buffer_dimensions(compressed_data,
                                                        compressed_size,
                                                        &dw, &dh, err);
-        
+
     if (success) {
       //g_debug("jpeg size %i,%i\n", (int)dw, (int)dh);
 
       // note: this must be the g_slice_alloc
       //       for compatibility with _openslide_cache
       rgba_buf = g_slice_alloc((gsize) dw * dh * 4);
-          
+
       if (rgba_buf) {
         success = _openslide_jpeg_decode_buffer(compressed_data,
                                                 compressed_size,
@@ -425,10 +425,10 @@ static bool vmic_read_tile(openslide_t *osr,
   struct _openslide_cache_entry *cache_entry;
 
   uint32_t *tiledata = _openslide_cache_get( osr->cache,
-                                             level, 
+                                             level,
                                              tile_col, tile_row,
                                              &cache_entry);
-  
+
   if (!tiledata) { // in case of cache miss, retrieve tile from ZIP archive
     gchar *tilefilename = NULL;
 
@@ -451,17 +451,17 @@ static bool vmic_read_tile(openslide_t *osr,
       if (zipx != -1) {
         // note: getting an index "-1" means the tile is missing,
         //       and must be rendered as a blank area
-        
+
         if (! _openslide_zip_read_file_data( vh->inner, zipx,
                                              &cbuf, &cbufsize, err ) ) {
           g_prefix_error(err, "Error in vmic_read_tile: ");
           success = false;
-        } 
+        }
       }
 
       // return handle to queue ASAP, so other threads can access
       vmic_handle_put(vmic->archive, vh);
-        
+
       // note: &tiledata returns a buffer allocated with g_slice_alloc
       //       and needs to be deallocated by the caller, in this case
       //       this will be done by _openslide_cache_entry_unref()
@@ -487,9 +487,9 @@ static bool vmic_read_tile(openslide_t *osr,
           success = false;
         }
       }
-      
+
       g_free(tilefilename);
-      
+
       if (!success) {
         // something has failed during above procedure
         return false;
@@ -504,7 +504,7 @@ static bool vmic_read_tile(openslide_t *osr,
                               &cache_entry);
       }
     }
-    
+
   }
 
   // draw it
@@ -539,7 +539,7 @@ static bool vmic_paint_region( G_GNUC_UNUSED openslide_t *osr, cairo_t *cr,
                                struct _openslide_level *level,
                                int32_t w, int32_t h,
                                GError **err) {
-    
+
   struct dz_level *lev = (struct dz_level *) level;
 
   //g_debug("call to paint_region: cairo=%p x=%i, y=%i, w=%i, h=%i, level-ds=%lf\n", (void*)cr, (int)x, (int)y, (int)w, (int)h, l->base.downsample);
@@ -624,7 +624,7 @@ static bool dzz_get_deepzoom_properties(xmlDoc *xmldoc, struct dzinfo *dzi,
   }
 
   xmlNode *xmlnodeSize = _openslide_xml_find_node(xmlnodeImage->children, (xmlChar*)_DEEPZOOM_PROP_SIZE_NODE);
-  
+
   if (xmlnodeSize == NULL)  {
     g_set_error( err, OPENSLIDE_ERROR, OPENSLIDE_ERROR_FAILED,
                  "DZC/XML: cannot find XML %s Element", _DEEPZOOM_PROP_SIZE_NODE);
@@ -672,7 +672,7 @@ static bool dzz_get_deepzoom_properties(xmlDoc *xmldoc, struct dzinfo *dzi,
     goto FAIL;
   }
   xmlFree(str_pictype);
-  
+
   if (dzi->tile_format_id != IMAGE_FORMAT_JPG) {
     g_set_error( err, OPENSLIDE_ERROR, OPENSLIDE_ERROR_FAILED,
                  "DZC/XML: at this stage, only tiles with JPG image format can be processed.");
@@ -683,7 +683,7 @@ static bool dzz_get_deepzoom_properties(xmlDoc *xmldoc, struct dzinfo *dzi,
   int cnt_level = 1;
   dzi->os_level_count = 0;
   /* calc by bit shifting (result is similar to formula "ceil(log(longside)/log(2))") */
-  g_assert(longside>0);  
+  g_assert(longside>0);
   while (longside > 1) {
     if (dzi->os_level_count == 0 && longside <= dzi->tilesize) {
       // also search for largest one-tiled level
@@ -707,7 +707,7 @@ FAIL:
 // if found, "true" is returned and 
 // the dzinfo structure receives the zip-index to the XML file and the name of the folder
 
-static bool dzz_find_key_file(zip_t *z, struct dzinfo *dzi) 
+static bool dzz_find_key_file(zip_t *z, struct dzinfo *dzi)
 {
   zip_int64_t key_file_id = -1;
   zip_int64_t count = zip_get_num_entries(z,0);
@@ -758,7 +758,7 @@ static bool vmic_try_init( const char *vmic_filename, zip_int64_t *inner_index,
   if ( !has_vmic_suffix ) {
     return false;
   }
-  
+
   // open outer archive
   // note: zip_open checks the magic bytes "PK34" before doing anything else
   zip_t *zo = _openslide_zip_open_archive(vmic_filename, err);
@@ -776,7 +776,7 @@ static bool vmic_try_init( const char *vmic_filename, zip_int64_t *inner_index,
                                               ZIP_FL_ENC_RAW | ZIP_FL_NOCASE);
   }
   //g_debug("found inner container file, name=%s, index=%i\n", zip_get_name(zo, vmici_index, ZIP_FL_ENC_RAW), (int)vmici_index);
-  
+
   if (vmici_index >= 0) {
     //check "magic number" of the file in question by reading first 4 bytes
     zip_file_t *file = zip_fopen_index(zo, vmici_index, 0);
@@ -784,11 +784,11 @@ static bool vmic_try_init( const char *vmic_filename, zip_int64_t *inner_index,
       uint32_t file_magic=0;
       zip_fread(file, &file_magic, 4);
       zip_fclose(file);
-      
+
       //g_debug("checking magic of inner container=%x\n", (int)file_magic);
 
       if (file_magic == 0x04034B50) { // "PK34" (The rare "PK00PK" signature cannot occur)
-        zip_stat_index(zo, vmici_index, 0, &zstat);        
+        zip_stat_index(zo, vmici_index, 0, &zstat);
         //g_debug("magic ok, inner_size=%li\n", (long int)zstat.size);
       }
       else {
@@ -845,7 +845,7 @@ static xmlDoc *_openslide_zip_parse_xml_file(zip_t *z,
   success = _openslide_zip_read_file_data(z, xml_file_id,
                                           &xmlbuf, &xmlsize, err);
   if (!success) {
-    g_prefix_error( err, 
+    g_prefix_error( err,
                     "Cannot access VMIC XML description file \"%s\" - reason:",
                     filename);
     goto FINISH;
@@ -853,7 +853,7 @@ static xmlDoc *_openslide_zip_parse_xml_file(zip_t *z,
   if (hash) {
     _openslide_hash_data(hash, xmlbuf, xmlsize);
   }
-  ppdebug("XML:%s\n",xmlbuf);
+  // ppdebug("XML:%s\n",xmlbuf);
   xmldoc = xmlReadMemory( xmlbuf, xmlsize, NULL, NULL,
                           XML_PARSE_NOERROR | XML_PARSE_NOWARNING | XML_PARSE_NONET
                         /*| XML_PARSE_COMPACT*/ | XML_PARSE_NOBLANKS);
@@ -882,7 +882,7 @@ static void vmic_convert_xml_tree_to_properties(xmlNode *node,
                attribute = attribute->next) {
         xmlChar* value = xmlGetProp(node, attribute->name);
         gchar *propname = g_strconcat(elementname, ".", attribute->name, NULL);
-        ppdebug("XML_ELEMENT_NODE property=%s value=\"%s\"\n", propname, value);
+        // ppdebug("XML_ELEMENT_NODE property=%s value=\"%s\"\n", propname, value);
         g_hash_table_insert(os_properties, propname, g_strdup((gchar*) value));
         xmlFree(value);
       }
@@ -894,26 +894,26 @@ static void vmic_convert_xml_tree_to_properties(xmlNode *node,
     }
     else if (node->type == XML_TEXT_NODE) {
       xmlChar *content = xmlNodeGetContent(node);
-      ppdebug("XML_TEXT_NODE nodename=%s, content=\"%s\"\n", (char*) node->name, (char*)content);
+      // ppdebug("XML_TEXT_NODE nodename=%s, content=\"%s\"\n", (char*) node->name, (char*)content);
       // trim CR/spaces from text node in place
 #define trimspace(c) ((c)==' '||c=='\r'||c=='\n'||c=='\t')
       xmlChar *tc = content;
       xmlChar c;
         while ( (c=*tc)!='\0' && trimspace(c) ) {
         tc++;
-        ppdebug("trimming '%02x', new length=%i\n", c, strlen(tc));
+        // ppdebug("trimming '%02x', new length=%i\n", c, strlen(tc));
       }
       int e=strlen(tc);
       while (e>0) {
         c=tc[--e];
         if (!trimspace(c)) break;
         tc[e]='\0';
-        ppdebug("trimming '%02x', new length=%i\n", c, strlen(tc));
+        // ppdebug("trimming '%02x', new length=%i\n", c, strlen(tc));
       }
       if (!*tc) {
-        ppdebug("nothing left after trimspace\n");
+        // ppdebug("nothing left after trimspace\n");
       } else {
-        ppdebug("XML_TEXT_NODE property=%s value=\"%s\"\n", (char*)propname_prefix, (char*)tc);
+        // ppdebug("XML_TEXT_NODE property=%s value=\"%s\"\n", (char*)propname_prefix, (char*)tc);
         g_hash_table_insert(os_properties,
                           g_strdup((gchar*) propname_prefix),
                           g_strdup((gchar*) tc));
@@ -931,7 +931,7 @@ static bool vmic_get_properties(openslide_t *osr, zip_t *z,
   bool success;
   xmlDoc *xmldoc;
   struct dzinfo *dzi = (struct dzinfo *) osr->data;
-  
+
   // Parse DEEPZOOM properties
   dzz_find_key_file(z, dzi);
   //g_debug("deepzoom key file=%s, folder=%s\n", dzz->key_filename, dzz->folder_name);
@@ -946,7 +946,7 @@ static bool vmic_get_properties(openslide_t *osr, zip_t *z,
   if (!success) {
     return false;
   }
-  if (dzi->overlap != 0) { 
+  if (dzi->overlap != 0) {
     g_set_error( err, OPENSLIDE_ERROR, OPENSLIDE_ERROR_FAILED,
                  "DZC/XML: DZ Overlap parameter is %i, but as of now (3/2017), "
     		     "VMIC tiles are not expected to overlap !",
@@ -955,7 +955,7 @@ static bool vmic_get_properties(openslide_t *osr, zip_t *z,
   }
 
   // Parse VMIC properties from VMCF/config.osc
-  xmldoc = _openslide_zip_parse_xml_file( z, _PRECIPOINT_PROPS_FILENAME, 
+  xmldoc = _openslide_zip_parse_xml_file( z, _PRECIPOINT_PROPS_FILENAME,
                                           ZIP_FL_ENC_RAW, err,
                                           quickhash );
   if (!xmldoc) {
@@ -977,7 +977,7 @@ static bool vmic_get_properties(openslide_t *osr, zip_t *z,
   xmlFreeDoc(xmldoc);
 
   // copy magnification to "openslide.objective-power"
-  _openslide_duplicate_double_prop( osr, _PRECIPOINT_PROPPATH_MAGNIFICATION, 
+  _openslide_duplicate_double_prop( osr, _PRECIPOINT_PROPPATH_MAGNIFICATION,
                                     OPENSLIDE_PROPERTY_NAME_OBJECTIVE_POWER );
   // copy title/name to "openslide.comment"
   const char *value = g_hash_table_lookup( osr->properties,
@@ -995,8 +995,8 @@ static bool vmic_get_properties(openslide_t *osr, zip_t *z,
 static void vmic_destroy_levels(openslide_t *osr) {
   for (int32_t i = 0; i < osr->level_count; ++i) {
     struct dz_level *l = (struct dz_level*) osr->levels[i];
-    if (l) {    
-      _openslide_grid_destroy(l->grid);   
+    if (l) {
+      _openslide_grid_destroy(l->grid);
       g_slice_free1(sizeof(struct dz_level), l);
     }
   }
@@ -1024,8 +1024,8 @@ static bool vmic_create_levels(openslide_t *osr, GError **err) {
   os_level_id = 0;
   // openslide full image is at os_level_id 0
   // deepzoom full image is dz_level_id = highest dz level
-  for (dz_level_id = dzi->dz_level_count-1; 
-         dz_level_id >= dzi->dz_one_tile_level; 
+  for (dz_level_id = dzi->dz_level_count-1;
+         dz_level_id >= dzi->dz_one_tile_level;
            dz_level_id--) {
     //g_debug("creating deepzoom level=%i, w=%i, h=%i\n", dz_level_id, (int)w, (int)h);
 
@@ -1038,7 +1038,7 @@ static bool vmic_create_levels(openslide_t *osr, GError **err) {
     int tiles_down = (h + tilesize - 1) / tilesize;
     int tiles_across = (w + tilesize - 1) / tilesize;
     //g_debug("tiles down=%i, tiles across=%i\n", (int)tiles_down, (int)tiles_across);
-    l->base.tile_h = tilesize; 
+    l->base.tile_h = tilesize;
     l->base.tile_w = tilesize;
     l->base.w = w;  // total pixel size of level
     l->base.h = h;
@@ -1091,14 +1091,14 @@ static bool vmic_get_associated_image_data(struct _openslide_associated_image *_
   bool success;
   gpointer cbuf;
   gsize cbufsize;
-  
+
   struct vmic_handlecache *hc = assoc_img->ref_vmic->archive;
   struct vmic_handle *vh = vmic_handle_get(hc, err);
   if (vh==NULL) {
     return false;
   }
   //g_debug("requesting associated image: w=%i, h=%i\n", (int)assoc_img->base.w, (int)assoc_img->base.h);
-  
+
   success = _openslide_zip_read_file_data( vh->inner, assoc_img->zipindex,
                                            &cbuf, &cbufsize, err );
   if (success) {
@@ -1219,13 +1219,13 @@ static bool precipoint_vmic_open( openslide_t *osr, const char *filename,
     goto FAIL;
   }
   zip_t *zi = vh->inner;
-  g_debug("call to vmic_get_properties\n");
+  // g_debug("call to vmic_get_properties\n");
   success = vmic_get_properties(osr, zi, quickhash1, err);
   if (!success) goto FAIL;
-  g_debug("call to vmic_create_levels\n");
+  // g_debug("call to vmic_create_levels\n");
   success = vmic_create_levels(osr, err);
   if (!success) goto FAIL;
-  g_debug("call to vmic_collect_associated_images\n");
+  // g_debug("call to vmic_collect_associated_images\n");
   vmic_collect_associated_images(osr, zi, err);
   if (*err) goto FAIL;
   gchar *hashfilename = g_strdup_printf( "%s/%i/0_0.%s",
@@ -1247,9 +1247,9 @@ static bool precipoint_vmic_open( openslide_t *osr, const char *filename,
   success = _openslide_zip_read_file_data(zi, hash_tile_x,
                                           &hashbuf, &bufsize, err);
   if (!success) {
-    g_prefix_error( err, 
+    g_prefix_error( err,
                     "precipoint_open: can't file=%s from zip, reason: ",
-                    hashfilename);    
+                    hashfilename);
     g_free(hashfilename);
     goto FAIL;
   }
@@ -1272,7 +1272,7 @@ FAIL2:
   osr->data=NULL;
   return false;
 }
-                      
+
 const struct _openslide_format _openslide_format_precipoint_vmic = {
   .name = _PRECIPOINT_VMICTYPE,
   .vendor = _PRECIPOINT_VENDOR,
@@ -1516,7 +1516,7 @@ static const struct _openslide_ops gtif_ops = {
 static bool precipoint_gtif_detect(const char *filename G_GNUC_UNUSED,
                           struct _openslide_tifflike *tl, GError **err) {
   // ensure we have a TIFF
-  ppdebug("detect gtif 1\n");
+  // ppdebug("detect gtif 1\n");
 
   if (!tl) {
     g_set_error(err, OPENSLIDE_ERROR, OPENSLIDE_ERROR_FAILED,
@@ -1531,7 +1531,7 @@ static bool precipoint_gtif_detect(const char *filename G_GNUC_UNUSED,
     return false;
   }
 
-  ppdebug("detect gtif 2\n");
+  // ppdebug("detect gtif 2\n");
 
   // check ImageDescription
   const char *tagval = _openslide_tifflike_get_buffer(tl, 0,
@@ -1542,11 +1542,11 @@ static bool precipoint_gtif_detect(const char *filename G_GNUC_UNUSED,
                                                       err);
 */
   if (!tagval) {
-    ppdebug("TIFFTAG_IMAGEDESCRIPTION not found\n");
+    // ppdebug("TIFFTAG_IMAGEDESCRIPTION not found\n");
     return false;
   }
 
-  ppdebug("tagval=%s\r\n", tagval);
+  // ppdebug("tagval=%s\r\n", tagval);
 
   if (!g_str_has_prefix(tagval, "{")) {
     g_set_error(err, OPENSLIDE_ERROR, OPENSLIDE_ERROR_FAILED,
@@ -1564,7 +1564,7 @@ static bool precipoint_gtif_detect(const char *filename G_GNUC_UNUSED,
 static char json_getch(const char **spp) {
   char c;
   while ( (c = **spp) != 0 ) {
-    ppdebug("parsing char=%c\n", c);
+    // ppdebug("parsing char=%c\n", c);
     if (c!=' ' && c!='\t' && c!='\n' && c!='\r') {
       break;
     }
@@ -1584,7 +1584,7 @@ static bool json_parse(const char **pjson, const gchar *prefix_key, GHashTable *
   const char *p = *pjson;
   bool success = true;
 
-  ppdebug("parsing prefix=%s at position %p\n", prefix_key, p);
+  // ppdebug("parsing prefix=%s at position %p\n", prefix_key, p);
 
   again:
   c = json_getch(&p);
@@ -1603,7 +1603,7 @@ static bool json_parse(const char **pjson, const gchar *prefix_key, GHashTable *
         if (!key) {
           break;
         }
-        ppdebug("got key=%s\n", key);
+        // ppdebug("got key=%s\n", key);
         if (json_getch(&p) != ':') {
           success = false;
           break;
@@ -1611,17 +1611,17 @@ static bool json_parse(const char **pjson, const gchar *prefix_key, GHashTable *
         ++p;
 
         gchar *path = prefix_key ? g_strconcat(prefix_key, ".", key, NULL) : g_strdup(key);
-        ppdebug("recursively parse path=%s position=%p\n", path, p);
+        // ppdebug("recursively parse path=%s position=%p\n", path, p);
         success = json_parse(&p, path, properties, err);
-        ppdebug("recursively parse path=%s success=%d position=%p\n", path, success, p);
+        // ppdebug("recursively parse path=%s success=%d position=%p\n", path, success, p);
         g_free(path);
 
         if (!success) {
           break;
         }
-        ppdebug("position=%p\n", p);
+        // ppdebug("position=%p\n", p);
         c = json_getch(&p);
-        ppdebug("position=%p\n", p);
+        // ppdebug("position=%p\n", p);
       } while(c == ',');
       if (c != '}') {
           success = false;
@@ -1651,13 +1651,13 @@ static bool json_parse(const char **pjson, const gchar *prefix_key, GHashTable *
       break;
 
     default:
-      ppdebug("parse simple\n");
+      // ppdebug("parse simple\n");
       {
         gchar *value = json_parse_primitive(&p);
-        ppdebug("got simple value=%s\n", value);
+        // ppdebug("got simple value=%s\n", value);
         if (value) {
           bool insert_ok = g_hash_table_insert(properties, g_strdup(prefix_key), (gpointer) value);
-          ppdebug("insert (%s,%s) insert_ok=%d\n", prefix_key, value, insert_ok);
+          // ppdebug("insert (%s,%s) insert_ok=%d\n", prefix_key, value, insert_ok);
         }
       }
       break;
@@ -1681,7 +1681,7 @@ gchar* json_parse_primitive(const char **spp) {
   bool escaped;
 
   if (c=='\"') {
-    ppdebug("parsing quoted primitive\n");
+    // ppdebug("parsing quoted primitive\n");
     gp++;
     bp++;
     escaped=false;
@@ -1706,7 +1706,7 @@ gchar* json_parse_primitive(const char **spp) {
     if (c=='\0') goto error;
 
   } else {
-    ppdebug("parsing non-quoted primitive\n");
+    // ppdebug("parsing non-quoted primitive\n");
     while ( c = *gp, c != ' ' && c != '\r' && c != '\n' && c != '\t'
             && c != ':' && c != ',' && c != '}' && c != ']') {
       gp++;
@@ -1721,7 +1721,7 @@ gchar* json_parse_primitive(const char **spp) {
     }
   }
 
-  ppdebug("primitive len=%d\n", len);
+  // ppdebug("primitive len=%d\n", len);
 
   gchar *gc = g_malloc(len+2); // Escape Sequenzen können den String nur verkürzen
   gchar *pc = gc;
@@ -1751,7 +1751,7 @@ gchar* json_parse_primitive(const char **spp) {
                 unum += c;
               }
               gint lu = g_unichar_to_utf8(unum, pc);
-              ppdebug("unichar=%i utflen=%i\n",unum,lu);
+              // ppdebug("unichar=%i utflen=%i\n",unum,lu);
               pc += lu;
               c=0;
             }
@@ -1771,13 +1771,13 @@ gchar* json_parse_primitive(const char **spp) {
   *pc = '\0';
 
   //gchar *gc = g_strndup(bp, len);
-  ppdebug("primitive=%s\n", gc);
+  // ppdebug("primitive=%s\n", gc);
   *spp = gp;
   return gc;
 
 
 error:
-  ppdebug("primitive failed\n");
+  // ppdebug("primitive failed\n");
   return NULL;
 }
 
@@ -1792,20 +1792,20 @@ static void gtif_add_properties(openslide_t *osr, GHashTable *hash_props) {
 
   g_hash_table_iter_init (&iter, hash_props);
   while (g_hash_table_iter_next (&iter, &key, &value)) {
-    ppdebug("PROPERTY: key=%s value=%s ", key, value);
+    // ppdebug("PROPERTY: key=%s value=%s ", key, value);
     if (g_str_has_prefix(key, "PreciPoint")
         || g_str_has_prefix(key, "ScanConfig")
         || g_str_has_prefix(key, "aperio")
        )
     {
-      ppdebug("no prefix\n");
+      // ppdebug("no prefix\n");
       g_hash_table_insert(osr->properties,
                         g_strdup(key),
                         g_strdup(value));
     }
     else
     {
-      ppdebug("+gtif.prefix\n");
+      // ppdebug("+gtif.prefix\n");
       g_hash_table_insert(osr->properties,
                         g_strdup_printf("gtif.%s", key),
                         g_strdup(value));
@@ -1957,7 +1957,7 @@ static bool precipoint_gtif_open(openslide_t *osr,
     bool has_desc = TIFFGetField(tiff, TIFFTAG_IMAGEDESCRIPTION, &image_desc);
     if (TIFFIsTiled(tiff)) {
       //g_debug("tiled directory: %d", dir);
-      ppdebug("tiled directory: %d\nimage-desc=%s\n", dir, has_desc ? image_desc : "none");
+      // ppdebug("tiled directory: %d\nimage-desc=%s\n", dir, has_desc ? image_desc : "none");
       struct gtif_level *l = g_slice_new0(struct gtif_level);
       struct _openslide_tiff_level *tiffl = &l->tiffl;
       if (i) {
@@ -2006,7 +2006,7 @@ static bool precipoint_gtif_open(openslide_t *osr,
         }
       }
     } else {
-      ppdebug("non-tiled directory: %d\nimage_desc=%s\n", dir, has_desc ? image_desc : "none");
+      // ppdebug("non-tiled directory: %d\nimage_desc=%s\n", dir, has_desc ? image_desc : "none");
       // associated image
       gchar *assoc_name = has_desc ? g_strdup(image_desc) : g_strdup_printf("associated_image_%i", dir);
       success = _openslide_tiff_add_associated_image(osr, assoc_name, tc,
@@ -2017,7 +2017,7 @@ static bool precipoint_gtif_open(openslide_t *osr,
       if (!success) {
         goto FAIL;
       }
-      ppdebug("associated image added: %d", dir);
+      // ppdebug("associated image added: %d", dir);
       //g_debug("associated image: %d", dir);
     }
   } while (TIFFReadDirectory(tiff));
